@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         id="org.eclipse.evm.ide.fragment"
+         point="org.eclipse.e4.workbench.model">
+      <fragment
+            apply="notexists"
+            uri="fragment.e4xmi">
+      </fragment>
+   </extension>
+   <extension
+         id="plcide"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="org.eclipse.ui.ide.workbench"
+            name="PLC IDE">
+         <property
+               name="appName"
+               value="PLC IDE">
+         </property>
+      </product>
+   </extension>
+   <extension
+         point="org.eclipse.ui.newWizards">
+      <category
+            id="org.eclipse.evm.ide.plcproject"
+            name="SNEMA-SERVICE">
+      </category>
+      <wizard
+            category="org.eclipse.evm.ide.plcproject"
+            class="org.eclipse.evm.ide.ui.wizard.NewBricPlcProjectWizard"
+            icon="icons/Sample.png"
+            id="org.eclipse.evm.ide.plcproject.category"
+            name="BRIC PLC"
+            project="true">
+      </wizard>
+   </extension>
+   <extension
+         point="org.eclipse.core.contenttype.contentTypes">
+      <content-type
+            file-extensions="tasks"
+            id="org.eclipse.evm.ide.contenttype.tasks"
+            name="Tasks"
+            priority="high">
+      </content-type>
+   </extension>
+   <extension
+         point="org.eclipse.ui.editors">
+      <editorContentTypeBinding
+            contentTypeId="org.eclipse.evm.ide.contenttype.tasks"
+            editorId="org.eclipse.ui.genericeditor.GenericEditor">
+      </editorContentTypeBinding>
+   </extension>
+   
+   <extension
+      point="org.eclipse.ui.genericeditor.presentationReconcilers">
+    <presentationReconciler
+         class="org.eclipse.evm.ide.contenttype.PropertiesReconciler"
+         contentType="org.eclipse.evm.ide.contenttype.tasks">
+   </presentationReconciler>
+</extension>
+
+</plugin>
