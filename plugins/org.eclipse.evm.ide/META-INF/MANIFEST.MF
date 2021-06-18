@@ -20,7 +20,8 @@ Require-Bundle: javax.inject,
  org.eclipse.ui.editors;bundle-version="3.14.0",
  org.eclipse.ui.genericeditor;bundle-version="1.2.0",
  org.eclipse.ui.workbench.texteditor;bundle-version="3.16.0",
- org.eclipse.jface.text;bundle-version="3.17.0"
+ org.eclipse.jface.text;bundle-version="3.17.0",
+ org.eclipse.evm.ide.editor;bundle-version="1.0.0"
 Bundle-RequiredExecutionEnvironment: JavaSE-15
 Automatic-Module-Name: org.eclipse.evm.ide
 Bundle-ActivationPolicy: lazy

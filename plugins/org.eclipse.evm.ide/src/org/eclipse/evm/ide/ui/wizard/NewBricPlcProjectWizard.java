@@ -2,6 +2,7 @@ package org.eclipse.evm.ide.ui.wizard;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 
 import org.eclipse.core.resources.IContainer;
@@ -14,77 +15,106 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.FileLocator;
 import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.runtime.jobs.Job;
+import org.eclipse.evm.ide.ui.*;
+import org.eclipse.evm.ide.ui.commands.NewAppCommand;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.wizard.Wizard;
 import org.eclipse.ui.INewWizard;
 import org.eclipse.ui.IWorkbench;
+import org.eclipse.ui.actions.WorkspaceModifyOperation;
 import org.eclipse.ui.dialogs.WizardNewProjectCreationPage;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.FrameworkUtil;
 
 public class NewBricPlcProjectWizard extends Wizard implements INewWizard {
 
-    private static final String LINE_BREAK = System.getProperty("line.separator");
+	/** The page. */
+	private NewBricPlcProjectPage page;
 
-    private WizardNewProjectCreationPage projectCreationPage;
+	/**
+	 * Instantiates a new new system wizard.
+	 */
+	public NewBricPlcProjectWizard() {
+		setWindowTitle(Messages.New4diacProjectWizard_WizardName);
+	}
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.eclipse.jface.wizard.Wizard#addPages()
+	 */
+	@Override
+	public void addPages() {
+		page = new NewBricPlcProjectPage(Messages.New4diacProjectWizard_WizardName);
+		page.setTitle(Messages.New4diacProjectWizard_WizardName);
+		page.setDescription(Messages.New4diacProjectWizard_WizardDesc);
 
-    public NewBricPlcProjectWizard() {
-        setWindowTitle("New project for task");
-        Bundle bundle = FrameworkUtil.getBundle(getClass());
-        URL find = FileLocator.find(bundle, new Path("icons/vogella48.jpg"), null);
-        setDefaultPageImageDescriptor(ImageDescriptor.createFromURL(find));
-    }
+		addPage(page);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.eclipse.jface.wizard.IWizard#performFinish()
+	 */
+	@Override
+	public boolean performFinish() {
+		try {
+			WorkspaceModifyOperation op = new WorkspaceModifyOperation() {
+				@Override
+				protected void execute(IProgressMonitor monitor) {
+					createProject(monitor != null ? monitor : new NullProgressMonitor());
+				}
+			};
+			getContainer().run(false, true, op);
+		} catch (InvocationTargetException | InterruptedException x) {
+			return false;
+		}
+		// everything worked fine
+		return true;
+	}
+	
+	/**
+	 * Creates a new project in the workspace.
+	 *
+	 * @param monitor the monitor
+	 */
+	private void createProject(final IProgressMonitor monitor) {
+		try {
 
-    @Override
-    public void init(IWorkbench workbench, IStructuredSelection selection) {
-    }
+			IProject newProject = SystemManager.INSTANCE.createNew4diacProject(page.getProjectName(),
+					page.getLocationPath(), page.importDefaultPalette(), monitor);
+			AutomationSystem system = SystemManager.INSTANCE.createNewSystem(newProject, page.getInitialSystemName());
+			TypeManagementPreferencesHelper.setupVersionInfo(system);
+			createInitialApplication(monitor, system);
+		} catch (CoreException e) {
+			Activator.getDefault().logError(e.getMessage(), e);
+		} finally {
+			monitor.done();
+		}
+	}
+	
+	private void createInitialApplication(final IProgressMonitor monitor, AutomationSystem system) {
+		NewAppCommand cmd = new NewAppCommand(system, page.getInitialApplicationName(), ""); //$NON-NLS-1$
+		cmd.execute(monitor, null);
 
-    @Override
-    public void addPages() {
-        // Reuse the WizardNewProjectCreationPage from org.eclipse.ui.ide
-        projectCreationPage = new WizardNewProjectCreationPage("New task project");
-        projectCreationPage.setTitle("Create a tasks project");
-        projectCreationPage.setDescription("Creates a general project with *.tasks files.");
-        addPage(projectCreationPage);
-    }
+		Application app = cmd.getApplication();
+		if (page.getOpenApplication() && null != app) {
+			OpenListenerManager.openEditor(app);
+		}
+	}
 
-    @Override
-    public boolean performFinish() {
-        String projectName = projectCreationPage.getProjectName();
-        Job projectCreationJob = Job.create("Creating new tasks project", monitor -> {
-            IWorkspace workspace = ResourcesPlugin.getWorkspace();
-            IWorkspaceRoot root = workspace.getRoot();
-            IProject project = root.getProject(projectName);
-            if(!project.exists()) {
-                project.create(monitor);
-                project.open(monitor);
-
-                createTaskFile(project, "Training.tasks", "1", "", monitor);
-                createTaskFile(project, "Training2.tasks", "2", "Training.tasks", monitor);
-            }
-        });
-        projectCreationJob.schedule();
-
-        return true;
-    }
-
-    private void createTaskFile(IContainer container, String fileName, String id, String dependent, IProgressMonitor monitor) throws CoreException {
-        IFile todoFile = container.getFile(new Path(fileName));
-		// Create some sample contents for the task file
-        StringBuilder sb = new StringBuilder();
-        sb.append("ID: ");
-        sb.append(id);
-        sb.append(LINE_BREAK);
-        sb.append("Summary: Created by project task wizard");
-        sb.append(LINE_BREAK);
-        sb.append("Dependent: ");
-        sb.append(dependent);
-        InputStream inputStream = new ByteArrayInputStream(sb.toString().getBytes());
-        // create automatically closes the stream. See JavaDoc
-        todoFile.create(inputStream, IResource.NONE, monitor);
-    }
-
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.eclipse.ui.IWorkbenchWizard#init(org.eclipse.ui.IWorkbench,
+	 * org.eclipse.jface.viewers.IStructuredSelection)
+	 */
+	@Override
+	public void init(final IWorkbench workbench, final IStructuredSelection selection) {
+		// currently nothing to do here
+	}
 }
